@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Экономика помещений — пилот vs целевое решение</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+  :root{
+    --sidebar-bg:#1a2226;
+    --sidebar-bg-2:#222d32;
+    --navbar-bg:#ffffff;
+    --accent:#3c8dbc;
+    --accent-dark:#367fa9;
+    --good:#00a65a;
+    --warn:#f39c12;
+    --bad:#dd4b39;
+    --muted:#6b7c85;
+    --bg:#ecf0f5;
+    --card:#ffffff;
+    --border:#e3e7eb;
+    --text:#2b3339;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:"Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    font-size:14px; line-height:1.5;
+  }
+  a{color:var(--accent); text-decoration:none;}
+
+  /* ===== Layout shell ===== */
+  .wrapper{display:flex; min-height:100vh;}
+
+  .sidebar{
+    width:230px; flex-shrink:0; background:var(--sidebar-bg);
+    color:#b8c7ce; position:fixed; top:0; bottom:0; left:0;
+    transition:transform .25s ease; z-index:1000; overflow-y:auto;
+  }
+  .sidebar-brand{
+    height:56px; display:flex; align-items:center; gap:10px; padding:0 16px;
+    background:var(--sidebar-bg-2); color:#fff; font-weight:600; font-size:15px;
+    border-bottom:1px solid rgba(255,255,255,.08);
+  }
+  .sidebar-brand i{color:var(--accent); font-size:20px;}
+  .sidebar-section-label{
+    padding:14px 16px 6px; font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+    color:#4b565c;
+  }
+  .sidebar-nav{list-style:none; margin:0; padding:0 0 20px;}
+  .sidebar-nav li a{
+    display:flex; align-items:center; gap:10px; padding:9px 16px; color:#b8c7ce;
+    font-size:13.5px; border-left:3px solid transparent;
+  }
+  .sidebar-nav li a i{width:18px; text-align:center; color:#7ea6b9;}
+  .sidebar-nav li a:hover{background:#242f34; color:#fff;}
+  .sidebar-nav li.active a{
+    background:var(--accent); color:#fff; border-left-color:#fff;
+  }
+  .sidebar-nav li.active a i{color:#fff;}
+  .sidebar-badge{
+    margin-left:auto; font-size:10px; padding:1px 6px; border-radius:8px;
+    background:rgba(255,255,255,.12); color:#cfd8dc;
+  }
+
+  .main{flex:1; margin-left:230px; display:flex; flex-direction:column; min-width:0;}
+
+  .navbar{
+    height:56px; background:var(--navbar-bg); border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between; padding:0 18px;
+    position:sticky; top:0; z-index:900;
+  }
+  .navbar-left{display:flex; align-items:center; gap:14px;}
+  #sidebarToggle{
+    border:none; background:none; font-size:18px; color:var(--muted); cursor:pointer; padding:6px;
+  }
+  .navbar-title{font-size:15px; font-weight:600; color:#333;}
+  .navbar-right{display:flex; align-items:center; gap:16px; font-size:13px; color:var(--muted);}
+  .navbar-right .chip{
+    background:#f4f6f8; border:1px solid var(--border); border-radius:4px;
+    padding:4px 10px; display:flex; align-items:center; gap:6px;
+  }
+
+  .content{padding:20px; max-width:1180px; width:100%; margin:0 auto;}
+
+  .page-header{margin-bottom:18px;}
+  .page-header h1{font-size:20px; margin:0 0 4px; font-weight:600; color:#2b3339;}
+  .page-header p{margin:0; color:var(--muted); font-size:13.5px;}
+
+  /* ===== Small stat boxes ===== */
+  .stat-grid{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:22px;
+  }
+  .stat-box{
+    background:var(--card); border-radius:3px; box-shadow:0 1px 2px rgba(0,0,0,.08);
+    overflow:hidden; border-top:3px solid var(--accent);
+  }
+  .stat-box.b-good{border-top-color:var(--good);}
+  .stat-box.b-warn{border-top-color:var(--warn);}
+  .stat-box.b-bad{border-top-color:var(--bad);}
+  .stat-box-body{padding:14px 16px;}
+  .stat-box .label{font-size:11.5px; text-transform:uppercase; letter-spacing:.03em; color:var(--muted); margin-bottom:6px;}
+  .stat-compare{display:flex; align-items:baseline; gap:8px; flex-wrap:wrap;}
+  .stat-compare .old{font-size:15px; color:#9aa5ab; text-decoration:line-through;}
+  .stat-compare .arrow{color:var(--muted); font-size:13px;}
+  .stat-compare .new{font-size:24px; font-weight:700; color:#2b3339;}
+  .stat-note{font-size:11.5px; color:var(--muted); margin-top:4px;}
+
+  /* ===== Cards ===== */
+  .box{
+    background:var(--card); border-radius:3px; box-shadow:0 1px 2px rgba(0,0,0,.08);
+    margin-bottom:20px; border-top:3px solid var(--accent);
+  }
+  .box-header{
+    padding:12px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px;
+  }
+  .box-header h2{font-size:14.5px; margin:0; font-weight:600; color:#2b3339;}
+  .box-header i{color:var(--accent);}
+  .box-body{padding:6px 16px 14px;}
+
+  /* ===== Compare table ===== */
+  table.compare{width:100%; border-collapse:collapse; font-size:13px;}
+  table.compare thead th{
+    text-align:left; padding:10px 10px; font-size:11.5px; text-transform:uppercase;
+    letter-spacing:.03em; color:var(--muted); border-bottom:2px solid var(--border);
+  }
+  table.compare thead th.col-now{color:var(--bad);}
+  table.compare thead th.col-target{color:var(--good);}
+  table.compare tbody td{padding:11px 10px; border-bottom:1px solid var(--border); vertical-align:top;}
+  table.compare tbody tr:last-child td{border-bottom:none;}
+  table.compare td.feature{font-weight:600; color:#2b3339; white-space:nowrap; width:190px;}
+  table.compare td.feature i{color:var(--accent); margin-right:6px; width:16px; text-align:center;}
+  .pill{display:inline-block; font-size:10.5px; padding:1px 7px; border-radius:9px; font-weight:600; margin-left:6px;}
+  .pill.now{background:#fdecea; color:var(--bad);}
+  .pill.target{background:#e6f6ec; color:var(--good);}
+
+  /* ===== Stack / tools ===== */
+  .tool-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px;}
+  .tool-card{
+    border:1px solid var(--border); border-radius:4px; padding:12px 14px;
+    display:flex; gap:12px; align-items:flex-start;
+  }
+  .tool-card i{font-size:18px; color:var(--accent); margin-top:2px; width:22px; text-align:center;}
+  .tool-card .t-title{font-weight:600; font-size:13px; color:#2b3339; margin-bottom:3px;}
+  .tool-card .t-desc{font-size:12px; color:var(--muted);}
+  .tool-status{font-size:10px; padding:1px 6px; border-radius:8px; background:#e6f6ec; color:var(--good); margin-left:6px; white-space:nowrap;}
+
+  .footnote{
+    font-size:12px; color:var(--muted); background:#fff8e6; border:1px solid #f0e2b6;
+    border-radius:4px; padding:12px 14px; display:flex; gap:10px; align-items:flex-start;
+  }
+  .footnote i{color:var(--warn); margin-top:2px;}
+
+  /* ===== Mobile ===== */
+  @media (max-width:900px){
+    .stat-grid{grid-template-columns:repeat(2,1fr);}
+    .tool-grid{grid-template-columns:1fr 1fr;}
+  }
+  @media (max-width:700px){
+    .sidebar{transform:translateX(-100%);}
+    .sidebar.open{transform:translateX(0); box-shadow:2px 0 12px rgba(0,0,0,.25);}
+    .main{margin-left:0;}
+    .stat-grid{grid-template-columns:1fr 1fr;}
+    .tool-grid{grid-template-columns:1fr;}
+    table.compare{font-size:12px;}
+    table.compare td.feature{width:120px; white-space:normal;}
+    .navbar-right span.hide-sm{display:none;}
+  }
+  @media (max-width:480px){
+    .stat-grid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand"><i class="fa-solid fa-building"></i> Экономика помещений</div>
+    <div class="sidebar-section-label">Целевая система</div>
+    <ul class="sidebar-nav">
+      <li class="active"><a href="#overview"><i class="fa-solid fa-gauge"></i> Дашборд</a></li>
+      <li><a href="#"><i class="fa-solid fa-city"></i> Объекты <span class="sidebar-badge">13</span></a></li>
+      <li><a href="#"><i class="fa-solid fa-users"></i> Арендаторы <span class="sidebar-badge">47</span></a></li>
+      <li><a href="#"><i class="fa-solid fa-file-invoice-dollar"></i> Начисления</a></li>
+      <li><a href="#"><i class="fa-solid fa-building-columns"></i> Банковские выписки</a></li>
+      <li><a href="#compare"><i class="fa-solid fa-shield-halved"></i> Зона контроля <span class="sidebar-badge">3</span></a></li>
+      <li><a href="#stack"><i class="fa-solid fa-layer-group"></i> Из чего собрано</a></li>
+      <li><a href="#"><i class="fa-solid fa-gear"></i> Настройки</a></li>
+    </ul>
+  </aside>
+
+  <div class="main">
+    <div class="navbar">
+      <div class="navbar-left">
+        <button id="sidebarToggle" aria-label="Меню"><i class="fa-solid fa-bars"></i></button>
+        <div class="navbar-title">Северная, 17 — план-факт, май 2026</div>
+      </div>
+      <div class="navbar-right">
+        <span class="chip hide-sm"><i class="fa-solid fa-circle-check" style="color:var(--good)"></i> Пилот сдан</span>
+        <span class="chip"><i class="fa-regular fa-clock"></i> Черновик — для обсуждения</span>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <div class="page-header" id="overview">
+        <h1>Что вы получили сейчас — и что можно получить дальше</h1>
+        <p>Один и тот же процесс, две версии реализации. Ниже — честное сравнение по фактам вашего же майского пилота, без маркетинга.</p>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-box b-warn">
+          <div class="stat-box-body">
+            <div class="label">Платежи, найденные сами</div>
+            <div class="stat-compare"><span class="old">40%</span><span class="arrow">→</span><span class="new">~90%</span></div>
+            <div class="stat-note">на майских данных: 6 из 15 начислений нашлись 1-в-1</div>
+          </div>
+        </div>
+        <div class="stat-box b-warn">
+          <div class="stat-box-body">
+            <div class="label">Объектов без переделки</div>
+            <div class="stat-compare"><span class="old">1</span><span class="arrow">→</span><span class="new">13</span></div>
+            <div class="stat-note">пилот — только «Северная, 17»</div>
+          </div>
+        </div>
+        <div class="stat-box b-warn">
+          <div class="stat-box-body">
+            <div class="label">Где живут данные</div>
+            <div class="stat-compare"><span class="old" style="font-size:14px">1 файл на ПК</span></div>
+            <div class="stat-note">→ облачная база, доступна с любого устройства и не теряется</div>
+          </div>
+        </div>
+        <div class="stat-box b-warn">
+          <div class="stat-box-body">
+            <div class="label">Регулярные расходы</div>
+            <div class="stat-compare"><span class="new" style="font-size:18px">0 ₽</span><span class="arrow">→</span><span class="new" style="font-size:18px">от ~2 000 ₽/мес</span></div>
+            <div class="stat-note">облако + ИИ-разбор платежей, ориентировочно</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="box" id="compare">
+        <div class="box-header"><i class="fa-solid fa-scale-balanced"></i><h2>Сравнение по шагам процесса</h2></div>
+        <div class="box-body">
+          <table class="compare">
+            <thead>
+              <tr>
+                <th>Шаг</th>
+                <th class="col-now">Пилот сейчас <span class="pill now">Excel</span></th>
+                <th class="col-target">Целевое решение <span class="pill target">БД + ИИ</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="feature"><i class="fa-solid fa-file-invoice"></i>Начисление аренды</td>
+                <td>Формулами в конкретном файле report.xlsx, по одному объекту</td>
+                <td>Та же логика, но хранится один раз в базе и работает сразу на все 13 зданий</td>
+              </tr>
+              <tr>
+                <td class="feature"><i class="fa-solid fa-magnifying-glass-dollar"></i>Сопоставление платежа с арендатором</td>
+                <td>Формула находит платёж только если сумма и имя совпали 1-в-1 — на майских данных это 6 из 15 строк</td>
+                <td>ИИ читает назначение платежа как человек: понимает сокращения, опечатки, «Аренда пилларса», номера договоров без явного адреса объекта</td>
+              </tr>
+              <tr>
+                <td class="feature"><i class="fa-solid fa-shield-halved"></i>Спорные платежи</td>
+                <td>Сотрудник вручную листает всю выписку и ищет, что не сошлось</td>
+                <td>В «Зону контроля» попадают только реально неясные случаи — остальное ИИ уже разнёс и подписался под уверенностью</td>
+              </tr>
+              <tr>
+                <td class="feature"><i class="fa-solid fa-gauge-high"></i>Показания счётчиков</td>
+                <td>Вписываются в ячейку вручную, каждый месяц заново</td>
+                <td>Сфотографировали счётчик — цифры распознаются и подставляются сами</td>
+              </tr>
+              <tr>
+                <td class="feature"><i class="fa-solid fa-folder-open"></i>Счета и акты</td>
+                <td>Лежат в почте/на диске, найти нужный — отдельная задача</td>
+                <td>Хранятся в облаке, привязаны к конкретному платежу — открывается по клику из той же строки</td>
+              </tr>
+              <tr>
+                <td class="feature"><i class="fa-solid fa-bell"></i>Задолженность арендатора</td>
+                <td>Видно только когда открыли файл и посчитали сальдо руками</td>
+                <td>Бот сам напоминает арендатору при просрочке, без вашего участия</td>
+              </tr>
+              <tr>
+                <td class="feature"><i class="fa-solid fa-user-check"></i>Финальное подтверждение</td>
+                <td>Штатный сотрудник тратит время на разбор всей пачки</td>
+                <td>Оператор (может быть удалённо, из любого региона) подтверждает через простой бот-интерфейс только спорные строки — секунды на платёж</td>
+              </tr>
+              <tr>
+                <td class="feature"><i class="fa-solid fa-scale-unbalanced"></i>Риск потерять файл</td>
+                <td>Один Excel-файл на одном компьютере</td>
+                <td>Облачная база с историей изменений — ничего не перезаписывается молча</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="box" id="stack">
+        <div class="box-header"><i class="fa-solid fa-layer-group"></i><h2>Из чего это будет собрано</h2></div>
+        <div class="box-body">
+          <div class="tool-grid">
+            <div class="tool-card">
+              <i class="fa-solid fa-database"></i>
+              <div>
+                <div class="t-title">Облачная база данных<span class="tool-status">уже развёрнута</span></div>
+                <div class="t-desc">Хранит объекты, арендаторов, договоры, начисления и оплаты в одном месте вместо разрозненных файлов.</div>
+              </div>
+            </div>
+            <div class="tool-card">
+              <i class="fa-solid fa-brain"></i>
+              <div>
+                <div class="t-title">ИИ-разбор платежей</div>
+                <div class="t-desc">Читает назначение платежа и решает, к какому объекту/арендатору/статье оно относится — там, где формула бессильна.</div>
+              </div>
+            </div>
+            <div class="tool-card">
+              <i class="fa-solid fa-camera"></i>
+              <div>
+                <div class="t-title">Распознавание показаний</div>
+                <div class="t-desc">Фото счётчика → цифры сами попадают в нужную ячейку, без ручного набора.</div>
+              </div>
+            </div>
+            <div class="tool-card">
+              <i class="fa-solid fa-cloud-arrow-up"></i>
+              <div>
+                <div class="t-title">Облачное хранилище документов</div>
+                <div class="t-desc">Счета, акты, показания — хранятся централизованно и привязаны к конкретной операции.</div>
+              </div>
+            </div>
+            <div class="tool-card">
+              <i class="fa-brands fa-telegram"></i>
+              <div>
+                <div class="t-title">Бот-оператор</div>
+                <div class="t-desc">Подтверждение спорных платежей и напоминания арендаторам о задолженности — через простой чат.</div>
+              </div>
+            </div>
+            <div class="tool-card">
+              <i class="fa-solid fa-server"></i>
+              <div>
+                <div class="t-title">Сервер для расчётов<span class="tool-status">уже развёрнут</span></div>
+                <div class="t-desc">Крутит все расчёты и связывает базу, ИИ и бота между собой — работает круглосуточно без вашего компьютера.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footnote">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <div>
+          Цифры «~90%», «от ~2 000 ₽/мес» и др. — оценка по итогам разбора майского пилота, не гарантия и не готовое коммерческое предложение.
+          Пилот полностью рабочий и без этого: всё, что справа, — отдельный следующий шаг, который имеет смысл обсуждать только если формат текущего Excel-отчёта вас устраивает по сути, но хочется меньше ручной работы каждый месяц.
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  const toggle = document.getElementById('sidebarToggle');
+  const sidebar = document.getElementById('sidebar');
+  toggle.addEventListener('click', () => sidebar.classList.toggle('open'));
+</script>
+</body>
+</html>
